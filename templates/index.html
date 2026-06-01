@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi Optimasi Jalur Evakuasi — Hill Climbing</title>
+  <meta name="description"
+        content="Simulasi interaktif algoritma Hill Climbing (Simple, Steepest-Ascent, Stochastic) untuk optimasi jalur evakuasi gedung. Visualisasi local optima, plateau, dan ridge." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════════ -->
+<header class="app-header" role="banner">
+  <div class="header-inner">
+    <div class="header-logo">
+      <div class="logo-icon" aria-hidden="true">🏢</div>
+      <span class="logo-text">Evakuasi<span>Gedung</span></span>
+    </div>
+    <span class="header-spacer"></span>
+    <div class="header-badge">Hill Climbing Simulator</div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN LAYOUT
+══════════════════════════════════════════════════════════════════ -->
+<main class="app-layout" id="main-content" data-active-tab="grid">
+
+  <!-- Mobile Tab Navigation (Only visible on mobile screen sizes) -->
+  <nav class="mobile-tabs" role="tablist" aria-label="Navigasi Simulasi">
+    <button class="mobile-tab-btn active" role="tab" aria-selected="true" data-tab="grid">
+      <span class="tab-icon">🗺️</span>
+      <span class="tab-label">Peta & Alat</span>
+    </button>
+    <button class="mobile-tab-btn" role="tab" aria-selected="false" data-tab="stats">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Statistik</span>
+    </button>
+    <button class="mobile-tab-btn" role="tab" aria-selected="false" data-tab="logs">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">Log & Info</span>
+    </button>
+  </nav>
+
+  <!-- ─── LEFT SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar-left" aria-label="Panel Kontrol">
+
+    <!-- Tool Selector -->
+    <section class="panel" aria-labelledby="tools-heading">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">🖊️</div>
+        <h2 class="panel-title" id="tools-heading">Alat Gambar</h2>
+      </div>
+      <div class="panel-body">
+        <div class="tool-grid" role="group" aria-label="Pilih alat gambar">
+
+          <button class="tool-btn" data-tool="start" id="tool-start" aria-label="Titik mulai" title="Klik untuk menempatkan titik mulai evakuasi">
+            <span class="tool-icon">🚶</span>
+            Start
+          </button>
+
+          <button class="tool-btn" data-tool="exit" id="tool-exit" aria-label="Titik keluar" title="Klik untuk menempatkan pintu keluar">
+            <span class="tool-icon">🚪</span>
+            Exit
+          </button>
+
+          <button class="tool-btn active" data-tool="wall" id="tool-wall" aria-label="Dinding" title="Klik/drag untuk menggambar dinding">
+            <span class="tool-icon">🧱</span>
+            Dinding
+          </button>
+
+          <button class="tool-btn" data-tool="fire" id="tool-fire" aria-label="Api/bahaya" title="Klik untuk menempatkan zona api/bahaya">
+            <span class="tool-icon">🔥</span>
+            Api
+          </button>
+
+          <button class="tool-btn" data-tool="empty" id="tool-empty" aria-label="Hapus sel" title="Klik/drag untuk menghapus sel">
+            <span class="tool-icon">🗑️</span>
+            Hapus
+          </button>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Algorithm Selector -->
+    <section class="panel" aria-labelledby="algo-heading">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">⚙️</div>
+        <h2 class="panel-title" id="algo-heading">Algoritma</h2>
+      </div>
+      <div class="panel-body">
+        <div class="algo-list" role="group" aria-label="Pilih algoritma Hill Climbing">
+
+          <button class="algo-btn active" data-algo="simple" id="algo-simple" aria-pressed="true">
+            <span class="algo-indicator" aria-hidden="true"></span>
+            <span class="algo-info">
+              <span class="algo-name">Simple Hill Climbing</span>
+              <span class="algo-desc">Ambil tetangga pertama yang lebih baik. Cepat tapi mudah terjebak.</span>
+            </span>
+          </button>
+
+          <button class="algo-btn" data-algo="steepest" id="algo-steepest" aria-pressed="false">
+            <span class="algo-indicator" aria-hidden="true"></span>
+            <span class="algo-info">
+              <span class="algo-name">Steepest-Ascent HC</span>
+              <span class="algo-desc">Evaluasi semua tetangga, pilih yang terbaik. Lebih teliti.</span>
+            </span>
+          </button>
+
+          <button class="algo-btn" data-algo="stochastic" id="algo-stochastic" aria-pressed="false">
+            <span class="algo-indicator" aria-hidden="true"></span>
+            <span class="algo-info">
+              <span class="algo-name">Stochastic HC</span>
+              <span class="algo-desc">Pilih acak berbobot dari tetangga lebih baik. Lebih eksplorasi.</span>
+            </span>
+          </button>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Presets -->
+    <section class="panel" aria-labelledby="preset-heading">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">🗺️</div>
+        <h2 class="panel-title" id="preset-heading">Preset Peta</h2>
+      </div>
+      <div class="panel-body">
+        <div class="action-group">
+          <button class="btn btn-secondary preset-btn" data-preset="simple" id="preset-simple">
+            🏃 Koridor Sederhana
+          </button>
+          <button class="btn btn-secondary preset-btn" data-preset="optima" id="preset-optima">
+            🚫 Local Optima Trap
+          </button>
+          <button class="btn btn-secondary preset-btn" data-preset="maze" id="preset-maze">
+            🌀 Labirin Kompleks
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Actions & Speed -->
+    <section class="panel" aria-labelledby="action-heading">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">▶️</div>
+        <h2 class="panel-title" id="action-heading">Kontrol</h2>
+      </div>
+      <div class="panel-body">
+        <div class="action-group">
+
+          <!-- Speed slider -->
+          <div class="speed-control">
+            <span class="speed-label">Kecepatan:</span>
+            <input type="range" class="speed-slider" id="speed-slider"
+                   min="1" max="10" value="5" aria-label="Kecepatan animasi" />
+            <span class="speed-label" id="speed-label">5x</span>
+          </div>
+
+          <button class="btn btn-primary" id="run-btn" disabled aria-label="Jalankan algoritma">
+            <span>▶</span> Jalankan
+          </button>
+
+          <button class="btn btn-secondary" id="clear-path-btn" aria-label="Hapus jalur visualisasi">
+            🧹 Hapus Jalur
+          </button>
+
+          <button class="btn btn-danger" id="reset-btn" aria-label="Reset seluruh grid">
+            🔄 Reset Grid
+          </button>
+
+        </div>
+      </div>
+    </section>
+
+  </aside><!-- /sidebar-left -->
+
+  <!-- ─── MAIN GRID AREA ──────────────────────────────────────── -->
+  <section class="grid-area" aria-labelledby="grid-heading">
+
+    <div class="grid-wrapper">
+      <!-- Toolbar row -->
+      <div class="grid-toolbar">
+        <h2 id="grid-heading" style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);letter-spacing:0.5px;text-transform:uppercase;">
+          🏢 Peta Gedung (20×20)
+        </h2>
+        <div class="grid-info">
+          <span class="grid-stat">
+            <span class="stat-dot" style="background:var(--accent-green);"></span>
+            Start
+          </span>
+          <span class="grid-stat">
+            <span class="stat-dot" style="background:var(--accent-red);"></span>
+            Exit
+          </span>
+          <span class="grid-stat">
+            <span class="stat-dot" style="background:#374151;"></span>
+            Dinding: <strong id="stat-walls">0</strong>
+          </span>
+          <span class="grid-stat">
+            <span class="stat-dot" style="background:var(--accent-orange);"></span>
+            Api: <strong id="stat-fires">0</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- The grid -->
+      <div id="evacuation-grid" role="grid" aria-label="Grid peta evakuasi" aria-describedby="grid-instructions"></div>
+
+      <p id="grid-instructions" style="font-size:0.7rem;color:var(--text-muted);">
+        Klik atau drag pada grid untuk menggambar. Gunakan alat di panel kiri untuk memilih jenis sel.
+      </p>
+
+      <!-- Progress bar -->
+      <div class="progress-bar-wrap" style="width:100%;" aria-label="Progress animasi">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Status bar below grid -->
+    <div class="status-bar idle" id="status-bar" role="status" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="status-text">🖊️ Gambar peta evakuasi pada grid, lalu klik "Jalankan"</span>
+    </div>
+
+  </section><!-- /grid-area -->
+
+  <!-- ─── RIGHT SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar-right" aria-label="Panel Statistik">
+
+    <!-- Stats Cards -->
+    <section class="panel" aria-labelledby="stats-heading" id="panel-stats">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">📊</div>
+        <h2 class="panel-title" id="stats-heading">Statistik</h2>
+      </div>
+      <div class="panel-body">
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <span class="stat-card-label">Langkah</span>
+            <span class="stat-card-value" id="stat-steps">0</span>
+            <span class="stat-card-sub">saat ini</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-card-label">h(n)</span>
+            <span class="stat-card-value" id="stat-h-current">-</span>
+            <span class="stat-card-sub">heuristik</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-card-label">Panjang Jalur</span>
+            <span class="stat-card-value" id="stat-path-len">-</span>
+            <span class="stat-card-sub">sel</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-card-label">Total Iterasi</span>
+            <span class="stat-card-value" id="stat-total-steps">-</span>
+            <span class="stat-card-sub">iterasi</span>
+          </div>
+
+        </div>
+
+        <!-- Stochastic probability -->
+        <div class="stat-card" style="margin-top:8px;grid-column:1/-1;display:flex;align-items:center;gap:10px;">
+          <div>
+            <div class="stat-card-label">Probabilitas Pilihan (Stochastic)</div>
+            <div class="stat-card-value" id="stat-prob" style="font-size:1rem;">-</div>
+          </div>
+          <div style="flex:1;font-size:0.68rem;color:var(--text-muted);line-height:1.4;">
+            Probabilitas pemilihan tetangga berbobot
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Heuristic Chart -->
+    <section class="panel" aria-labelledby="chart-heading" id="panel-chart">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">📈</div>
+        <h2 class="panel-title" id="chart-heading">Grafik Heuristik</h2>
+      </div>
+      <div class="panel-body" style="padding:12px 14px;">
+        <div class="chart-container">
+          <canvas id="heuristic-chart" aria-label="Grafik penurunan nilai heuristik" role="img"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Condition Detection -->
+    <section class="panel" aria-labelledby="cond-heading" id="panel-cond">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">🔍</div>
+        <h2 class="panel-title" id="cond-heading">Deteksi Kondisi</h2>
+      </div>
+      <div class="panel-body">
+        <div class="condition-panel">
+
+          <div class="condition-item" id="cond-item-local_optima">
+            <span class="condition-icon">🚫</span>
+            <span class="condition-label" style="color:var(--accent-red);">Local Optima</span>
+            <span class="condition-count" id="cond-count-local_optima">0</span>
+          </div>
+
+          <div class="condition-item" id="cond-item-plateau">
+            <span class="condition-icon">⚠️</span>
+            <span class="condition-label" style="color:var(--accent-yellow);">Plateau</span>
+            <span class="condition-count" id="cond-count-plateau">0</span>
+          </div>
+
+          <div class="condition-item" id="cond-item-ridge">
+            <span class="condition-icon">⛰️</span>
+            <span class="condition-label" style="color:var(--accent-purple);">Ridge</span>
+            <span class="condition-count" id="cond-count-ridge">0</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Step Log -->
+    <section class="panel" aria-labelledby="log-heading" id="panel-log">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">📋</div>
+        <h2 class="panel-title" id="log-heading">Log Langkah</h2>
+      </div>
+      <div class="panel-body" style="padding:10px 12px;">
+        <div class="step-log" id="step-log" role="log" aria-live="polite" aria-label="Log langkah algoritma">
+          <div class="step-entry" style="color:var(--text-muted);font-size:0.72rem;padding:12px;text-align:center;">
+            Log langkah algoritma akan muncul di sini saat berjalan...
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Legend -->
+    <section class="panel" aria-labelledby="legend-heading" id="panel-legend">
+      <div class="panel-header">
+        <div class="panel-icon" aria-hidden="true">🗂️</div>
+        <h2 class="panel-title" id="legend-heading">Legenda Warna</h2>
+      </div>
+      <div class="panel-body">
+        <div class="legend-grid">
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(0,212,255,0.35);border:2px solid #00d4ff;"></div>
+            Posisi Saat Ini
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(0,212,255,0.18);border:1px solid rgba(0,212,255,0.4);"></div>
+            Jalur Ditemukan
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(59,130,246,0.1);border:1px solid transparent;"></div>
+            Sel Dijelajahi
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.5);"></div>
+            Tetangga Terbaik
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);"></div>
+            Tetangga Dievaluasi
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(239,68,68,0.25);border:2px solid #ef4444;"></div>
+            🚫 Local Optima
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(234,179,8,0.2);border:2px solid #eab308;"></div>
+            ⚠️ Plateau
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(139,92,246,0.2);border:2px solid #8b5cf6;"></div>
+            ⛰️ Ridge
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </aside><!-- /sidebar-right -->
+
+  <!-- ─── FOOTER ───────────────────────────────────────────────── -->
+  <footer class="app-footer" aria-label="Informasi algoritma">
+    <span>Simulasi Optimasi Jalur Evakuasi Gedung</span>
+    <span style="color:var(--border-default);">|</span>
+    <div class="footer-algo">
+      Algoritma Aktif:
+      <span class="footer-algo-badge" id="footer-algo">Simple Hill Climbing</span>
+    </div>
+    <span style="margin-left:auto;font-size:0.68rem;">
+      Kecerdasan Buatan — Hill Climbing Local Search
+    </span>
+  </footer>
+
+</main>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='js/grid.js') }}"></script>
+<script src="{{ url_for('static', filename='js/animation.js') }}"></script>
+
+</body>
+</html>
